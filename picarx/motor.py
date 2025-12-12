@@ -79,12 +79,12 @@ class Motor:
         self.speed = max(-100, min(100, speed))
         
         if self.pwm:
-            if self.speed >= 0:
-                GPIO.output(self.dir_pin, GPIO.HIGH)
-                self.pwm.ChangeDutyCycle(abs(self.speed))
-            else:
-                GPIO.output(self.dir_pin, GPIO.LOW)
-                self.pwm.ChangeDutyCycle(abs(self.speed))
+            # Set direction
+            direction = GPIO.HIGH if self.speed >= 0 else GPIO.LOW
+            GPIO.output(self.dir_pin, direction)
+            
+            # Set PWM duty cycle
+            self.pwm.ChangeDutyCycle(abs(self.speed))
     
     def stop(self):
         """Stop the motor"""

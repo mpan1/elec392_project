@@ -187,7 +187,7 @@ class LaneFollower:
             x2 = int(coeffs[0] * y2 + coeffs[1])
             
             return (x1, y1, x2, y2)
-        except:
+        except (TypeError, ValueError, IndexError):
             return None
     
     def _calculate_steering_angle(self, left_line, right_line, width):

@@ -12,6 +12,9 @@ except ImportError:
 class ObstacleAvoider:
     """Obstacle detection and avoidance using ultrasonic sensor and object detection"""
     
+    # Labels considered as obstacles in path
+    OBSTACLE_LABELS = ['person', 'car', 'bicycle', 'motorcycle', 'dog', 'cat', 'truck', 'bus']
+    
     def __init__(self, safe_distance=30.0, critical_distance=15.0):
         """
         Initialize obstacle avoider
@@ -67,7 +70,7 @@ class ObstacleAvoider:
                 
                 # If object is in center 50% of image and has high confidence
                 if score > 0.6 and 0.25 < center_x / 640 < 0.75:
-                    if label in ['person', 'car', 'bicycle', 'motorcycle', 'dog', 'cat']:
+                    if label in self.OBSTACLE_LABELS:
                         return {
                             'action': 'slow',
                             'reason': f'{label} detected in path',

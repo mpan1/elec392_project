@@ -71,7 +71,13 @@ echo ""
 echo "Step 6: Setting up Coral USB Accelerator..."
 echo "Installing Edge TPU runtime..."
 echo "deb https://packages.cloud.google.com/apt coral-edgetpu-stable main" | sudo tee /etc/apt/sources.list.d/coral-edgetpu.list
-curl https://packages.cloud.google.com/apt/doc/apt-key.gpg | sudo apt-key add -
+
+# Download GPG key to temporary file and verify before adding
+KEY_FILE=$(mktemp)
+curl -fsSL https://packages.cloud.google.com/apt/doc/apt-key.gpg -o "$KEY_FILE"
+sudo apt-key add "$KEY_FILE"
+rm -f "$KEY_FILE"
+
 sudo apt-get update
 sudo apt-get install -y libedgetpu1-std
 echo "✓ Coral USB Accelerator configured"
