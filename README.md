@@ -16,31 +16,34 @@ A repository for code used in Smith Engineering ELEC 392 design course. This pro
 elec392/
 ├── picarx/                      # PiCar-X hardware interface libraries
 │   ├── __init__.py
-│   ├── picarx.py               # Main PiCar-X controller class
-│   ├── motor.py                # DC motor control
-│   ├── servo.py                # Servo control (steering, camera)
-│   ├── camera.py               # Camera interface
-│   ├── ultrasonic.py           # Ultrasonic distance sensor
-│   └── grayscale.py            # Line tracking sensors
+│   ├── picarx.py                # Main PiCar-X controller class
+│   ├── motor.py                 # DC motor control
+│   ├── servo.py                 # Servo control (steering, camera)
+│   ├── camera.py                # Camera interface
+│   ├── ultrasonic.py            # Ultrasonic distance sensor
+│   └── grayscale.py             # Line tracking sensors
 ├── utils/                       # Autonomous driving utilities
 │   ├── autonomous_controller.py # Main autonomous driving controller
-│   ├── lane_following.py       # Lane detection and following
-│   ├── object_detection.py     # Object detection using Coral
-│   └── obstacle_avoidance.py   # Obstacle detection and avoidance
+│   ├── lane_following.py        # Lane detection and following
+│   ├── object_detection.py      # Object detection using Coral
+│   └── obstacle_avoidance.py    # Obstacle detection and avoidance
 ├── examples/                    # Sample code and demonstrations
-│   ├── basic_control.py        # Basic vehicle control example
-│   ├── lane_following_demo.py  # Lane following demonstration
+│   ├── basic_control.py         # Basic vehicle control example
+│   ├── lane_following_demo.py   # Lane following demonstration
 │   ├── object_detection_demo.py # Object detection demonstration
-│   └── autonomous_taxi_demo.py # Full autonomous taxi demo
+│   └── autonomous_taxi_demo.py  # Full autonomous taxi demo
 ├── models/                      # AI models for object detection
 │   └── (Place TFLite models here)
-└── requirements.txt            # Python dependencies
+├── tutorials/
+│   ├──road_sign_detector        # Training Road Sign Detector (Colab)
+│   └──salad_detector            # Training Salad Detector (Colab)
+└── requirements.txt             # Python dependencies
 ```
 
 ## Hardware Requirements
 
 - Sunfounder PiCar-X robot car
-- Raspberry Pi 4 (recommended)
+- Raspberry Pi 4B (recommended)
 - Coral USB Accelerator
 - Camera module (Pi Camera or compatible)
 - Ultrasonic distance sensor
@@ -49,7 +52,7 @@ elec392/
 ## Software Requirements
 
 - Python 3.7+
-- Raspberry Pi OS (Bullseye or later)
+- Raspberry Pi OS (Bullseye)
 - See `requirements.txt` for Python dependencies
 
 ## Installation
@@ -162,6 +165,6 @@ See LICENSE file for details.
 
 ## Course Information
 
-**Course**: ELEC 392 - Engineering Design
+**Course**: ELEC 392 - Engineering Design and Development
 **Institution**: Smith Engineering, Queen's University
 **Project**: Autonomous Robotic Taxi with PiCar-X 
