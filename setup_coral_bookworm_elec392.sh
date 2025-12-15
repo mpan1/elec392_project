@@ -128,9 +128,12 @@ else
   log "Python ${PYTHON_VERSION} already installed"
 fi
 
-log "Setting Python ${PYTHON_VERSION} as global default"
-pyenv global "$PYTHON_VERSION"
-pyenv rehash
+#log "Setting Python ${PYTHON_VERSION} as global default"
+#pyenv global "$PYTHON_VERSION"
+#pyenv rehash
+
+# Use Python 3.9 *only* to create the Coral venv
+PY39="$(pyenv root)/versions/3.9.20/bin/python"
 
 # ---------------------- pip + pipenv -------------------------
 log "Installing pipenv"
@@ -159,7 +162,7 @@ mkdir -p "$PROJECT_DIR"
 cd "$PROJECT_DIR"
 
 log "Creating Python virtual environment"
-python -m venv .venv
+"$PY39" -m venv .venv
 source .venv/bin/activate
 
 log "Installing pycoral into virtual environment"
@@ -167,6 +170,8 @@ pip install --upgrade pip
 pip install numpy==1.26.4
 pip install --extra-index-url https://google-coral.github.io/py-repo/ pycoral~=2.0
 
+log "Installing OpenCV into virtual environment"
+pip install opencv-python==4.11.0.86
 # ---------------------- TPU test -----------------------------
 log "Creating TPU detection test script"
 
