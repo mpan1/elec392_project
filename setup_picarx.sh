@@ -159,6 +159,7 @@ sudo apt-get install -y --no-install-recommends \
   python3-dev \
   python3-setuptools \
   python3-smbus \
+  python3-yaml \
   git i2c-tools \
   libatlas-base-dev \
   build-essential
