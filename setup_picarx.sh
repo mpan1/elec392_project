@@ -1,18 +1,18 @@
 #!/usr/bin/env bash
 #
 # setup_picarx.sh
-# - Clones SunFounder robot-hat + picar-x (v2.0 branch by default)
-# - Installs into a dedicated Python venv (recommended)
-# - Performs quick sanity checks (import + I2C presence)
+# - Clones SunFounder robot-hat + picar-x (+ vilib picamera2)
+# - Installs into SYSTEM Python (intentionally, for ELEC 392)
+# - Hardened for Debian 12 (Bookworm) PEP 668 pip restrictions
 #
 # Usage:
 #   ./setup_picarx.sh
 #
 # Optional environment variables:
 #   INSTALL_DIR    Where to put cloned repos (default: ~/dev/sunfounder)
-#   VENV_DIR       Where to create venv (default: ./venv-picarx)
 #   ROBOT_HAT_REF  Branch/tag/commit (default: v2.0)
 #   PICARX_REF     Branch/tag/commit (default: v2.0)
+#   VILIB_REF      Branch/tag/commit (default: picamera2)
 #   PYTHON_BIN     Python interpreter (default: python3)
 #
 set -euo pipefail
@@ -78,14 +78,13 @@ EOF
 # Config (override via env)
 # -------------------------
 INSTALL_DIR="${INSTALL_DIR:-$HOME/dev/sunfounder}"
-VENV_DIR="${VENV_DIR:-./venv-picarx}"
 ROBOT_HAT_REF="${ROBOT_HAT_REF:-v2.0}"
 PICARX_REF="${PICARX_REF:-v2.0}"
+VILIB_REF="${VILIB_REF:-picamera2}"
 PYTHON_BIN="${PYTHON_BIN:-python3}"
 
 ROBOT_HAT_REPO="https://github.com/sunfounder/robot-hat.git"
 PICARX_REPO="https://github.com/sunfounder/picar-x.git"
-VILIB_REF="${VILIB_REF:-picamera2}"
 VILIB_REPO="https://github.com/sunfounder/vilib.git"
 
 
@@ -135,12 +134,51 @@ sync_repo() {
 }
 
 # -------------------------
+# Bookworm / PEP 668 pip hardening
+# -------------------------
+pip_install_editable() {
+  local path="$1"
+  log "pip install (editable): $path"
+
+  # Capture output so we can detect PEP 668 and retry.
+  local out
+  out="$(sudo python3 -m pip install -e "$path" 2>&1 || true)"
+
+  # Success?
+  if echo "$out" | grep -qiE "Successfully installed|Installing collected packages|Obtaining file"; then
+    echo "$out"
+    return 0
+  fi
+
+  # PEP 668 externally-managed environment detection
+  if echo "$out" | grep -qiE "externally[- ]managed|This environment is externally managed"; then
+    warn "PEP 668 protection detected (Bookworm). Retrying with --break-system-packages..."
+    sudo python3 -m pip install --break-system-packages -e "$path"
+    return $?
+  fi
+
+  # Real failure
+  err "pip install failed for: $path"
+  echo "$out"
+  return 1
+}
+
+# -------------------------
 # Start
 # -------------------------
-log "PiCar-X setup (SunFounder robot-hat + picar-x)"
+if [[ $EUID -eq 0 ]]; then
+  err "Do not run this script as root. Run it normally; it will sudo when needed."
+  exit 1
+fi
+
+warn "This script installs Python packages into the SYSTEM Python environment."
+warn "This is intentional for ELEC 392 (fewer venvs, fewer tears)."
+warn "DO NOT run this on your personal laptop unless you enjoy consequences."
+sleep 2
+
+log "PiCar-X setup (SunFounder robot-hat + picar-x + vilib)"
 log "Install dir: $INSTALL_DIR"
-log "Venv dir:    $VENV_DIR"
-log "Refs:        robot-hat=$ROBOT_HAT_REF, picar-x=$PICARX_REF"
+log "Refs:        robot-hat=$ROBOT_HAT_REF, picar-x=$PICARX_REF, vilib=$VILIB_REF"
 
 need_cmd git
 need_cmd "$PYTHON_BIN"
@@ -154,82 +192,66 @@ fi
 # -------------------------
 log "Installing system packages (requires sudo)"
 sudo apt-get update
+
+# python3-venv intentionally omitted (no venv usage here)
 sudo apt-get install -y --no-install-recommends \
   python3-pip \
   python3-dev \
   python3-setuptools \
   python3-smbus \
+  python3-smbus2 \
   python3-yaml \
-  git i2c-tools \
+  git \
+  i2c-tools \
   libatlas-base-dev \
   build-essential
+
+# Optional: ensure pip tooling is modern enough (system-level)
+log "Upgrading pip tooling (system Python)"
+# This may also trip PEP 668; handle both cases.
+if ! sudo python3 -m pip install --upgrade pip setuptools wheel 2>/dev/null; then
+  warn "pip upgrade blocked by PEP 668; retrying with --break-system-packages..."
+  sudo python3 -m pip install --break-system-packages --upgrade pip setuptools wheel
+fi
 
 # Optional: enable I2C tools visibility check
 if [[ -e /dev/i2c-1 ]]; then
   log "I2C device present: /dev/i2c-1"
 else
   warn "/dev/i2c-1 not found. I2C may be disabled."
-  warn "Enable it with: sudo raspi-config  -> Interface Options -> I2C -> Enable"
+  warn "Enable it with: sudo raspi-config  -> Interface Options -> I2C -> Enable -> Reboot"
 fi
-
-# -------------------------
-# Create venv
-# -------------------------
-log "Creating Python virtual environment"
-if [[ ! -d "$VENV_DIR" ]]; then
-  "$PYTHON_BIN" -m venv "$VENV_DIR"
-fi
-
-# shellcheck disable=SC1090
-source "$VENV_DIR/bin/activate"
-
-log "Upgrading pip tooling in venv"
-python -m pip install --upgrade pip setuptools wheel
 
 # -------------------------
 # Clone repos (pinned)
 # -------------------------
 mkdir -p "$INSTALL_DIR"
 ROBOT_HAT_DIR="$INSTALL_DIR/robot-hat"
-VILIB_DIR="$INSTALL_DIR/vilib"
 PICARX_DIR="$INSTALL_DIR/picar-x"
+VILIB_DIR="$INSTALL_DIR/vilib"
 
 sync_repo "$ROBOT_HAT_REPO" "$ROBOT_HAT_DIR" "$ROBOT_HAT_REF"
 sync_repo "$PICARX_REPO"     "$PICARX_DIR"     "$PICARX_REF"
-
-if [[ -d "$VILIB_DIR/.git" ]]; then
-  log "Updating existing repo: $VILIB_DIR"
-  git -C "$VILIB_DIR" fetch origin "$VILIB_REF"
-  git -C "$VILIB_DIR" checkout "$VILIB_REF"
-else
-  log "Cloning vilib (branch=$VILIB_REF, depth=1)"
-  git clone -b "$VILIB_REF" --depth 1 "$VILIB_REPO" "$VILIB_DIR"
-fi
-
-log "Pinned vilib at: $(git -C "$VILIB_DIR" rev-parse --short HEAD)"
+sync_vilib_shallow "$VILIB_REPO" "$VILIB_DIR" "$VILIB_REF"
 
 # -------------------------
-# Install (editable) into venv
+# Install (editable) into SYSTEM Python
 # -------------------------
-log "Installing robot-hat into venv (editable)"
-python -m pip install -e "$ROBOT_HAT_DIR"
-
-log "Installing vilib into venv (editable)"
-python -m pip install -e "$VILIB_DIR"
-
-log "Installing picar-x into venv (editable)"
-python -m pip install -e "$PICARX_DIR"
+pip_install_editable "$ROBOT_HAT_DIR"
+pip_install_editable "$VILIB_DIR"
+pip_install_editable "$PICARX_DIR"
 
 # -------------------------
 # Sanity checks
 # -------------------------
 log "Sanity check: Python imports"
-python - <<'PY'
+python3 - <<'PY'
 import sys
 print("Python:", sys.version)
 
-# robot-hat import check (module name varies by version; try a couple)
+# robot-hat import check (module name varies)
 ok_hat = False
+last = None
 for name in ("robot_hat", "robot_hat.core", "robot_hat.utils"):
     try:
         __import__(name)
@@ -240,7 +262,8 @@ for name in ("robot_hat", "robot_hat.core", "robot_hat.utils"):
         last = e
 if not ok_hat:
     print("WARN: Could not import robot_hat modules cleanly. (May still work on target)")
-    print("      Last error:", repr(last))
+    if last:
+        print("      Last error:", repr(last))
 
 # vilib import check
 try:
@@ -272,16 +295,22 @@ cat <<EOF
 ============================================================
 DONE.
 
-To use the PiCar-X Python environment later:
+Python packages were installed into the SYSTEM Python environment.
 
-  source "$VENV_DIR/bin/activate"
+Quick verify:
+  python3 -c "from picarx import Picarx; import vilib; print('OK')"
 
 Repos were installed from:
   $ROBOT_HAT_DIR  (ref: $ROBOT_HAT_REF)
+  $VILIB_DIR      (ref: $VILIB_REF)
   $PICARX_DIR     (ref: $PICARX_REF)
 
 If I2C was missing:
   sudo raspi-config -> Interface Options -> I2C -> Enable -> Reboot
+
+Reminder:
+- This Pi is now a course appliance.
+- Re-imaging the SD card is the big red reset button.
 ============================================================
 
 EOF
