@@ -222,7 +222,13 @@ sudo apt-get install -y --no-install-recommends \
   git \
   i2c-tools \
   libatlas-base-dev \
-  build-essential
+  build-essential \
+  python3-libcamera \
+  python3-picamera2 \
+  rpicam-apps \
+  python3-opencv \
+  opencv-data \
+  ffmpeg
 
 # Optional: ensure pip tooling is modern enough (system-level)
 log "Upgrading pip tooling (system Python)"
