@@ -19,7 +19,7 @@ elec392_project/
 │   ├── 03_sound.py                                # Robot Hat sound examples (use sudo)
 │   ├── 04_ultrasonic_obstacle_avoidance.py        # Obstacle avoidance example using ultrasonic sensor
 │   ├── 05_line_following.py                       # Line following demonstration
-│   └── 06_recieve_detections_udp.py               # Receive object detections via UDP from remote detector
+│   └── 06_receive_detections_udp.py               # Receive object detections via UDP from remote detector
 ├── images/                                        # Folder for project images referenced by logbook
 ├── logbook/                                       # Folder for log entries 
 │   ├── .templates
@@ -155,11 +155,11 @@ python examples/05_line_following.py
 python utils/grayscale_calibration.py
 ```
 
-#### 6. UDP Detection Receiver (`06_recieve_detections_udp.py`)
+#### 6. UDP Detection Receiver (`06_receive_detections_udp.py`)
 Receive object detection data from a remote detector via UDP and control the vehicle based on detections.
 
 ```bash
-python examples/06_recieve_detections_udp.py
+python examples/06_receive_detections_udp.py
 ```
 
 **What it does:**
