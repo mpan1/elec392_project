@@ -7,13 +7,13 @@ import socket
 import time
 
 class DetectionReceiver:
-    def __init__(self, port=5005, timeout=0.2, stale_after=0.5):
+    def __init__(self, port=5005, timeout=0.01, stale_after=0.5):
         """
-        timeout: socket timeout (seconds)
+        timeout: socket timeout for individual recv() call (seconds) - use small value for non-blocking behavior
         stale_after: how old data can be before considered invalid
         """
         self.addr = ("127.0.0.1", port)
-        self.timeout = timeout
+        self.timeout = timeout  # Very small timeout for non-blocking behavior
         self.stale_after = stale_after
 
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
@@ -29,9 +29,11 @@ class DetectionReceiver:
         self.last_debug_time = time.time()
 
     def update(self):
-        """Attempt to receive new data (non-blocking-ish). Drains all pending packets."""
+        """Attempt to receive new data. Drains all currently available packets without blocking."""
         received_any = False
         packets_drained = 0
+        
+        # Try to read packets without blocking - use tiny timeout
         while True:
             try:
                 data, _ = self.sock.recvfrom(65535)
@@ -40,7 +42,11 @@ class DetectionReceiver:
                 packets_drained += 1
                 self.packet_count += 1
             except socket.timeout:
+                # No more packets available right now - that's ok
                 break
+            except json.JSONDecodeError:
+                # Corrupted packet, skip it
+                continue
         
         # Debug: print packet reception rate every 5 seconds
         if time.time() - self.last_debug_time >= 5.0:
