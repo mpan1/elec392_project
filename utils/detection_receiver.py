@@ -7,13 +7,13 @@ import socket
 import time
 
 class DetectionReceiver:
-    def __init__(self, port=5005, timeout=0.01, stale_after=0.5):
+    def __init__(self, port=5005, timeout=0.2, stale_after=0.5):
         """
-        timeout: socket timeout for individual recv() call (seconds) - use small value for non-blocking behavior
+        timeout: socket timeout (seconds)
         stale_after: how old data can be before considered invalid
         """
         self.addr = ("127.0.0.1", port)
-        self.timeout = timeout  # Very small timeout for non-blocking behavior
+        self.timeout = timeout
         self.stale_after = stale_after
 
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
@@ -29,30 +29,32 @@ class DetectionReceiver:
         self.last_debug_time = time.time()
 
     def update(self):
-        """Attempt to receive new data. Drains all currently available packets without blocking."""
         received_any = False
         packets_drained = 0
-        
-        # Try to read packets without blocking - use tiny timeout
+
         while True:
             try:
                 data, _ = self.sock.recvfrom(65535)
+            except socket.timeout:
+                # Nothing waiting → we’re done for this update() call
+                break
+            except OSError as e:
+                print(f"[DEBUG] socket error: {e}", flush=True)
+                break
+
+            try:
                 self.latest = json.loads(data.decode("utf-8"))
                 received_any = True
                 packets_drained += 1
                 self.packet_count += 1
-            except socket.timeout:
-                # No more packets available right now - that's ok
+            except json.JSONDecodeError as e:
+                print(f"[DEBUG] bad JSON: {e}", flush=True)
+
+            # Optional: safety cap so a flood can’t trap you
+            if packets_drained >= 50:
+                print("[DEBUG] hit drain cap (sender flooding)", flush=True)
                 break
-            except json.JSONDecodeError:
-                # Corrupted packet, skip it
-                continue
-        
-        # Debug: print packet reception rate every 5 seconds
-        if time.time() - self.last_debug_time >= 5.0:
-            print(f"[DEBUG] Received {self.packet_count} packets total, drained {packets_drained} this update")
-            self.last_debug_time = time.time()
-            
+
         return received_any
 
     def get_latest(self):
