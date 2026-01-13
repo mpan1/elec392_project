@@ -17,6 +17,8 @@ class DetectionReceiver:
         self.stale_after = stale_after
 
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        # Allow address reuse
+        self.sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         self.sock.bind(self.addr)
         self.sock.settimeout(self.timeout)
         # Increase receive buffer to handle burst traffic
